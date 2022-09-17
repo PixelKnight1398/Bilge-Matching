@@ -11,8 +11,8 @@ public class Match3Game : MonoBehaviour
 
     [Space(10)]
     [Header("Board Controls")]
-    [SerializeField] int boardWidth = 0; //game width in pieces
-    [SerializeField] int boardHeight = 0; //game height in pieces
+    [SerializeField] public int boardWidth = 0; //game width in pieces
+    [SerializeField] public int boardHeight = 0; //game height in pieces
     [SerializeField] float pieceWidth = 0.0f;
     [SerializeField] float pieceHeight = 0.0f;
     [SerializeField] float piecePadding = 0.0f;
@@ -46,16 +46,19 @@ public class Match3Game : MonoBehaviour
     [SerializeField] AudioSource MatchCombo1Sound = new AudioSource();
     [SerializeField] AudioSource MatchCombo2Sound = new AudioSource();
     [SerializeField] AudioSource SwapPieceSound = new AudioSource();
+    [SerializeField] AudioSource CrabbySound = new AudioSource();
 
     [Space(10)]
     [Header("Game Stats")]
     public int currentLevel = 1;
     public int currentLevelProgress = 0;
     public int currentLevelProgressCap = 200;
-    public int numPossiblePieces = 4;
+    public int numPossiblePieces = 5;
     public bool puffEnabled = false;
     public bool crabbyEnabled = false;
     public bool jellyEnabled = false;
+    public int comboState = 0;
+    public bool holdsCombo = false;
     public string currentGameState = "LOADING"; //game states; INIT, PLAYING, CLEAR
 
     public float pumpSpeed = 0.0f;
@@ -82,6 +85,7 @@ public class Match3Game : MonoBehaviour
     static newPieceDirection BoardDirection = newPieceDirection.Up;
 
     bool checkingPatterns = false;
+    bool fixBoard = false;
 
     // Start is called before the first frame update
     void Start()
@@ -91,9 +95,7 @@ public class Match3Game : MonoBehaviour
         gameBoardArray = new GameObject[boardHeight, boardWidth];
         popEffectArray = new GameObject[boardHeight, boardWidth];
 
-        InitBoard();
-
-        StartCoroutine(LoadLevel(1.0f));
+        currentGameState = "INIT";
     }
 
     //generates new board and stars
@@ -128,16 +130,8 @@ public class Match3Game : MonoBehaviour
         }
 
         //clear matching pieces at beginning
-        List<int[]> initMatchingPieces = FindMatchingPieces();
-        int loopLimit = 0;
-        while (initMatchingPieces.Count > 0 && loopLimit < 100)
-        {
-            loopLimit++;
-
-            ReplacePieces(initMatchingPieces);
-
-            initMatchingPieces = FindMatchingPieces();
-        }
+        //fixed update checks for this variable and runs replacement function before board loads
+        fixBoard = true;
 
         ResetStars();
     }
@@ -147,6 +141,8 @@ public class Match3Game : MonoBehaviour
     {
         yield return new WaitForSeconds(waitTime);
         //Your Function You Want to Call
+
+        fixBoard = false;
 
         gameStartSound.Play();
         waterObject.GetComponent<WaterController>().SetLerp(new Vector3(2f, -1.75f, 8.5f));
@@ -214,6 +210,11 @@ public class Match3Game : MonoBehaviour
                 currentGameState = "LOADING";
                 break;
             case "LOADING":
+
+                if (fixBoard)
+                {
+                    ReplacePieces();
+                }
 
                 break;
             case "UI":
@@ -401,8 +402,11 @@ public class Match3Game : MonoBehaviour
         }
     }
 
-    void ReplacePieces(List<int[]> piecesToReplace)
+    void ReplacePieces()
     {
+        Debug.Log("Replacing");
+        List<int[]> piecesToReplace = FindMatchingPieces();
+
         for (int i = 0; i < piecesToReplace.Count; i++)
         {
             int replacementPiece = Random.Range(0, numPossiblePieces);
@@ -432,31 +436,22 @@ public class Match3Game : MonoBehaviour
     {
         List<int[]> matchPieces = new List<int[]>();
 
+        holdsCombo = false;
+
         for (int i = 0; i < boardHeight; i++)
         {
             for (int j = 0; j < boardWidth; j++)
             {
-                //Debug.Log("Piece were on: " + i + ", " + j);
-                //Debug.Log(gameBoardArray[i, j].transform.name);
                 if (gameBoardArray[i, j] == null || gameBoardArray[i, j].gameObject.GetComponent<Match3Piece>().isMoving)
                 {
+                    holdsCombo = true;
                     continue;
                 }
-
-                bool skipPiece = false;
-                for (int q = 0; q < matchPieces.Count; q++)
+                if (gameBoardArray[i, j].GetComponent<Match3Piece>().isMatched)
                 {
-                    if (i == matchPieces[q][0] && j == matchPieces[q][1])
-                    {
-                        skipPiece = true;
-                    }
-                }
-                if (skipPiece)
-                {
-                    continue;
+                    matchPieces.Add(new int[] { i, j });
                 }
 
-                //Debug.Log("Piece is not null");
                 string currentPieceName = gameBoardArray[i, j].transform.name.Substring(0, 6);
 
                 //FIND CRABS
@@ -467,6 +462,7 @@ public class Match3Game : MonoBehaviour
                     if (!gameBoardArray[i, j].GetComponent<CrabbyScript>().isSubmerged)
                     {
                         Combo(10);
+                        CrabbySound.Play();
                         gameBoardArray[i, j].GetComponent<Match3Piece>().SetLerp(
                             new Vector3(gameBoardArray[i, j].transform.position.x + 10.0f, gameBoardArray[i, j].transform.position.y, gameBoardObject.transform.position.z),
                             3.0f,
@@ -476,167 +472,195 @@ public class Match3Game : MonoBehaviour
                     }
                 }
 
-                //MATCH PATTERNS
-                //Debug.Log("Current piece name: " + currentPieceName);
-                List<int[]> tempHorizontalMatchPieces = new List<int[]>();
-                tempHorizontalMatchPieces.Add(new int[] { i, j });
-                List<int[]> tempVerticalMatchPieces = new List<int[]>();
-                tempVerticalMatchPieces.Add(new int[] { i, j });
-                //Debug.Log("Looping row width left");
-                for (int k = 1; k < boardWidth; k++)
-                {
-                    //Debug.Log("Current k: " + k);
-                    //Debug.Log("I: " + i + "; J: " + j + "; K: " + k + "; J-K: " + (j - k));
-                    if ((j - k) < 0 || gameBoardArray[i, j - k] == null)
-                    {
-                        //Debug.Log("J-K is null or less than 0");
-                        break;
-                    }
-                    //Debug.Log("J-K is not null");
-                    //Debug.Log(currentPieceName + " =? " + gameBoardArray[i, j - k].transform.name.Substring(0, 6));
-                    if (gameBoardArray[i, j - k].transform.name.Substring(0, 6) != currentPieceName)
-                    {
-                        //Debug.Log("Piece names do not match");
-                        break;
-                    }
+                ////Debug.Log("Piece were on: " + i + ", " + j);
+                ////Debug.Log(gameBoardArray[i, j].transform.name);
+                //if (gameBoardArray[i, j] == null || gameBoardArray[i, j].gameObject.GetComponent<Match3Piece>().isMoving)
+                //{
+                //    continue;
+                //}
 
-                    if (gameBoardArray[i, j - k].gameObject.GetComponent<Match3Piece>().isMoving)
-                    {
-                        //Debug.Log("Next piece moving");
-                        break;
-                    }
-                    //Debug.Log("Piece names match");
-                    tempHorizontalMatchPieces.Add(new int[] { i, j - k });
-                }
+                //bool skipPiece = false;
+                //for (int q = 0; q < matchPieces.Count; q++)
+                //{
+                //    if (i == matchPieces[q][0] && j == matchPieces[q][1])
+                //    {
+                //        skipPiece = true;
+                //    }
+                //}
+                //if (skipPiece)
+                //{
+                //    continue;
+                //}
 
-                //Debug.Log("Looping row width right");
-                for (int k = 1; k < boardWidth; k++)
-                {
-                    //Debug.Log("Current k: " + k);
-                    //Debug.Log("I: " + i + "; J: " + j + "; K: " + k + "; J+K: " + (j + k));
-                    if ((j + k) > (boardWidth - 1) || gameBoardArray[i, j + k] == null)
-                    {
-                        //Debug.Log("J+K is null or more than board width");
-                        break;
-                    }
-                    //Debug.Log("J+K is not null");
-                    //Debug.Log(currentPieceName + " =? " + gameBoardArray[i, j + k].transform.name.Substring(0, 6));
-                    if (gameBoardArray[i, j + k].transform.name.Substring(0, 6) != currentPieceName)
-                    {
-                        //Debug.Log("Piece names do not match");
-                        break;
-                    }
-                    //Debug.Log("Piece names match");
+                ////Debug.Log("Piece is not null");
+                //string currentPieceName = gameBoardArray[i, j].transform.name.Substring(0, 6);
 
-                    if (gameBoardArray[i, j + k].gameObject.GetComponent<Match3Piece>().isMoving)
-                    {
-                        //Debug.Log("Next piece moving");
-                        break;
-                    }
+                ////MATCH PATTERNS
+                ////Debug.Log("Current piece name: " + currentPieceName);
+                //List<int[]> tempHorizontalMatchPieces = new List<int[]>();
+                //tempHorizontalMatchPieces.Add(new int[] { i, j });
+                //List<int[]> tempVerticalMatchPieces = new List<int[]>();
+                //tempVerticalMatchPieces.Add(new int[] { i, j });
+                ////Debug.Log("Looping row width left");
+                //for (int k = 1; k < boardWidth; k++)
+                //{
+                //    //Debug.Log("Current k: " + k);
+                //    //Debug.Log("I: " + i + "; J: " + j + "; K: " + k + "; J-K: " + (j - k));
+                //    if ((j - k) < 0 || gameBoardArray[i, j - k] == null)
+                //    {
+                //        //Debug.Log("J-K is null or less than 0");
+                //        break;
+                //    }
+                //    //Debug.Log("J-K is not null");
+                //    //Debug.Log(currentPieceName + " =? " + gameBoardArray[i, j - k].transform.name.Substring(0, 6));
+                //    if (gameBoardArray[i, j - k].transform.name.Substring(0, 6) != currentPieceName)
+                //    {
+                //        //Debug.Log("Piece names do not match");
+                //        break;
+                //    }
 
-                    tempHorizontalMatchPieces.Add(new int[] { i, j + k });
-                }
+                //    if (gameBoardArray[i, j - k].gameObject.GetComponent<Match3Piece>().isMoving)
+                //    {
+                //        //Debug.Log("Next piece moving");
+                //        break;
+                //    }
+                //    //Debug.Log("Piece names match");
+                //    tempHorizontalMatchPieces.Add(new int[] { i, j - k });
+                //}
 
-                //Debug.Log("Looping row width right");
-                for (int k = 1; k < boardHeight; k++)
-                {
-                    //Debug.Log("Current k: " + k);
-                    //Debug.Log("I: " + i + "; J: " + j + "; K: " + k + "; J+K: " + (j + k));
-                    if ((i - k) < 0 || gameBoardArray[i - k, j] == null)
-                    {
-                        //Debug.Log("J+K is null or more than board width");
-                        break;
-                    }
-                    //Debug.Log("J+K is not null");
-                    //Debug.Log(currentPieceName + " =? " + gameBoardArray[i, j + k].transform.name.Substring(0, 6));
-                    if (gameBoardArray[i - k, j].transform.name.Substring(0, 6) != currentPieceName)
-                    {
-                        //Debug.Log("Piece names do not match");
-                        break;
-                    }
-                    //Debug.Log("Piece names match");
+                ////Debug.Log("Looping row width right");
+                //for (int k = 1; k < boardWidth; k++)
+                //{
+                //    //Debug.Log("Current k: " + k);
+                //    //Debug.Log("I: " + i + "; J: " + j + "; K: " + k + "; J+K: " + (j + k));
+                //    if ((j + k) > (boardWidth - 1) || gameBoardArray[i, j + k] == null)
+                //    {
+                //        //Debug.Log("J+K is null or more than board width");
+                //        break;
+                //    }
+                //    //Debug.Log("J+K is not null");
+                //    //Debug.Log(currentPieceName + " =? " + gameBoardArray[i, j + k].transform.name.Substring(0, 6));
+                //    if (gameBoardArray[i, j + k].transform.name.Substring(0, 6) != currentPieceName)
+                //    {
+                //        //Debug.Log("Piece names do not match");
+                //        break;
+                //    }
+                //    //Debug.Log("Piece names match");
 
-                    if (gameBoardArray[i - k, j].gameObject.GetComponent<Match3Piece>().isMoving)
-                    {
-                        //Debug.Log("Next piece moving");
-                        break;
-                    }
+                //    if (gameBoardArray[i, j + k].gameObject.GetComponent<Match3Piece>().isMoving)
+                //    {
+                //        //Debug.Log("Next piece moving");
+                //        break;
+                //    }
 
-                    tempVerticalMatchPieces.Add(new int[] { i - k, j });
-                }
+                //    tempHorizontalMatchPieces.Add(new int[] { i, j + k });
+                //}
 
-                //Debug.Log("Looping row width right");
-                for (int k = 1; k < boardHeight; k++)
-                {
-                    //Debug.Log("Current k: " + k);
-                    //Debug.Log("I: " + i + "; J: " + j + "; K: " + k + "; J+K: " + (j + k));
-                    if ((i + k) > (boardHeight - 1) || gameBoardArray[i + k, j] == null)
-                    {
-                        //Debug.Log("J+K is null or more than board width");
-                        break;
-                    }
-                    //Debug.Log("J+K is not null");
-                    //Debug.Log(currentPieceName + " =? " + gameBoardArray[i, j + k].transform.name.Substring(0, 6));
-                    if (gameBoardArray[i + k, j].transform.name.Substring(0, 6) != currentPieceName)
-                    {
-                        //Debug.Log("Piece names do not match");
-                        break;
-                    }
-                    //Debug.Log("Piece names match");
+                ////Debug.Log("Looping row width right");
+                //for (int k = 1; k < boardHeight; k++)
+                //{
+                //    //Debug.Log("Current k: " + k);
+                //    //Debug.Log("I: " + i + "; J: " + j + "; K: " + k + "; J+K: " + (j + k));
+                //    if ((i - k) < 0 || gameBoardArray[i - k, j] == null)
+                //    {
+                //        //Debug.Log("J+K is null or more than board width");
+                //        break;
+                //    }
+                //    //Debug.Log("J+K is not null");
+                //    //Debug.Log(currentPieceName + " =? " + gameBoardArray[i, j + k].transform.name.Substring(0, 6));
+                //    if (gameBoardArray[i - k, j].transform.name.Substring(0, 6) != currentPieceName)
+                //    {
+                //        //Debug.Log("Piece names do not match");
+                //        break;
+                //    }
+                //    //Debug.Log("Piece names match");
 
-                    if (gameBoardArray[i + k, j].gameObject.GetComponent<Match3Piece>().isMoving)
-                    {
-                        //Debug.Log("Next piece moving");
-                        break;
-                    }
+                //    if (gameBoardArray[i - k, j].gameObject.GetComponent<Match3Piece>().isMoving)
+                //    {
+                //        //Debug.Log("Next piece moving");
+                //        break;
+                //    }
 
-                    tempVerticalMatchPieces.Add(new int[] { i + k, j });
-                }
+                //    tempVerticalMatchPieces.Add(new int[] { i - k, j });
+                //}
 
-                //Debug.Log("Amount of matches for J=" + j + ": " + tempMatchPieces.Count);
-                if (tempHorizontalMatchPieces.Count > 2)
-                {
-                    for (int l = 0; l < tempHorizontalMatchPieces.Count; l++)
-                    {
-                        bool containsMatchAlready = false;
-                        //Debug.Log(matchPieces.Count);
-                        for (int q = 0; q < matchPieces.Count; q++)
-                        {
-                            //Debug.Log("(" + tempMatchPieces[l][0] + " =? " + matchPieces[q][0] + ") (" + tempMatchPieces[l][1] + " =? " + matchPieces[q][1] + ")");
-                            if (tempHorizontalMatchPieces[l][0] == matchPieces[q][0] && tempHorizontalMatchPieces[l][1] == matchPieces[q][1])
-                            {
-                                containsMatchAlready = true;
-                            }
-                        }
-                        if (!containsMatchAlready)
-                        {
-                            matchPieces.Add(tempHorizontalMatchPieces[l]);
-                        }
-                    }
-                }
+                ////Debug.Log("Looping row width right");
+                //for (int k = 1; k < boardHeight; k++)
+                //{
+                //    //Debug.Log("Current k: " + k);
+                //    //Debug.Log("I: " + i + "; J: " + j + "; K: " + k + "; J+K: " + (j + k));
+                //    if ((i + k) > (boardHeight - 1) || gameBoardArray[i + k, j] == null)
+                //    {
+                //        //Debug.Log("J+K is null or more than board width");
+                //        break;
+                //    }
+                //    //Debug.Log("J+K is not null");
+                //    //Debug.Log(currentPieceName + " =? " + gameBoardArray[i, j + k].transform.name.Substring(0, 6));
+                //    if (gameBoardArray[i + k, j].transform.name.Substring(0, 6) != currentPieceName)
+                //    {
+                //        //Debug.Log("Piece names do not match");
+                //        break;
+                //    }
+                //    //Debug.Log("Piece names match");
 
-                //Debug.Log("Amount of matches for J=" + j + ": " + tempMatchPieces.Count);
-                if (tempVerticalMatchPieces.Count > 2)
-                {
-                    for (int l = 0; l < tempVerticalMatchPieces.Count; l++)
-                    {
-                        bool containsMatchAlready = false;
-                        //Debug.Log(matchPieces.Count);
-                        for (int q = 0; q < matchPieces.Count; q++)
-                        {
-                            //Debug.Log("(" + tempMatchPieces[l][0] + " =? " + matchPieces[q][0] + ") (" + tempMatchPieces[l][1] + " =? " + matchPieces[q][1] + ")");
-                            if (tempVerticalMatchPieces[l][0] == matchPieces[q][0] && tempVerticalMatchPieces[l][1] == matchPieces[q][1])
-                            {
-                                containsMatchAlready = true;
-                            }
-                        }
-                        if (!containsMatchAlready)
-                        {
-                            matchPieces.Add(tempVerticalMatchPieces[l]);
-                        }
-                    }
-                }
+                //    if (gameBoardArray[i + k, j].gameObject.GetComponent<Match3Piece>().isMoving)
+                //    {
+                //        //Debug.Log("Next piece moving");
+                //        break;
+                //    }
+
+                //    tempVerticalMatchPieces.Add(new int[] { i + k, j });
+                //}
+
+                ////Debug.Log("Amount of matches for J=" + j + ": " + tempMatchPieces.Count);
+                //if (tempHorizontalMatchPieces.Count > 2)
+                //{
+                //    for (int l = 0; l < tempHorizontalMatchPieces.Count; l++)
+                //    {
+                //        bool containsMatchAlready = false;
+                //        //Debug.Log(matchPieces.Count);
+                //        for (int q = 0; q < matchPieces.Count; q++)
+                //        {
+                //            //Debug.Log("(" + tempMatchPieces[l][0] + " =? " + matchPieces[q][0] + ") (" + tempMatchPieces[l][1] + " =? " + matchPieces[q][1] + ")");
+                //            if (tempHorizontalMatchPieces[l][0] == matchPieces[q][0] && tempHorizontalMatchPieces[l][1] == matchPieces[q][1])
+                //            {
+                //                containsMatchAlready = true;
+                //            }
+                //        }
+                //        if (!containsMatchAlready)
+                //        {
+                //            matchPieces.Add(tempHorizontalMatchPieces[l]);
+                //        }
+                //    }
+                //}
+
+                ////Debug.Log("Amount of matches for J=" + j + ": " + tempMatchPieces.Count);
+                //if (tempVerticalMatchPieces.Count > 2)
+                //{
+                //    for (int l = 0; l < tempVerticalMatchPieces.Count; l++)
+                //    {
+                //        bool containsMatchAlready = false;
+                //        //Debug.Log(matchPieces.Count);
+                //        for (int q = 0; q < matchPieces.Count; q++)
+                //        {
+                //            //Debug.Log("(" + tempMatchPieces[l][0] + " =? " + matchPieces[q][0] + ") (" + tempMatchPieces[l][1] + " =? " + matchPieces[q][1] + ")");
+                //            if (tempVerticalMatchPieces[l][0] == matchPieces[q][0] && tempVerticalMatchPieces[l][1] == matchPieces[q][1])
+                //            {
+                //                containsMatchAlready = true;
+                //            }
+                //        }
+                //        if (!containsMatchAlready)
+                //        {
+                //            matchPieces.Add(tempVerticalMatchPieces[l]);
+                //        }
+                //    }
+                //}
             }
+        }
+
+        if (holdsCombo == false)
+        {
+            comboState = 0;
         }
 
         return matchPieces;
@@ -656,9 +680,8 @@ public class Match3Game : MonoBehaviour
             {
                 continue;
             }
-            Destroy(GameObject.Find(gameBoardArray[deleteIndices[0], deleteIndices[1]].transform.name));
+            Destroy(gameBoardArray[deleteIndices[0], deleteIndices[1]].transform.gameObject);
             gameBoardArray[deleteIndices[0], deleteIndices[1]] = null;
-            //gameBoardArray[deleteIndices[0], deleteIndices[1]].GetComponent<MeshRenderer>().enabled = false;
 
             popEffectArray[deleteIndices[0], deleteIndices[1]].GetComponent<ParticleSystem>().Play();
 
@@ -666,21 +689,34 @@ public class Match3Game : MonoBehaviour
 
         if (matchPieces.Count > 0)
         {
-            if (matchPieces.Count == 3)
+            switch (comboState)
             {
-                Match3Sound.Play();
-            }
-            else if (matchPieces.Count == 4)
-            {
-                Match4Sound.Play();
-            }
-            else if (matchPieces.Count == 5)
-            {
-                Match5Sound.Play();
-            }
-            else if (matchPieces.Count >= 6)
-            {
-                Match6Sound.Play();
+                case 0:
+                    if (matchPieces.Count == 3)
+                    {
+                        Match3Sound.Play();
+                    }
+                    else if (matchPieces.Count == 4)
+                    {
+                        Match4Sound.Play();
+                    }
+                    else if (matchPieces.Count == 5)
+                    {
+                        Match5Sound.Play();
+                    }
+                    else if (matchPieces.Count >= 6)
+                    {
+                        Match6Sound.Play();
+                    }
+                    comboState = 1;
+                    break;
+                case 1:
+                    MatchCombo1Sound.Play();
+                    comboState = 2;
+                    break;
+                case 2:
+                    MatchCombo1Sound.Play();
+                    break;
             }
             Combo(Mathf.RoundToInt(matchPieces.Count / 2));
         }
@@ -714,7 +750,7 @@ public class Match3Game : MonoBehaviour
                 //puff
                 break;
             case 3:
-                numPossiblePieces = 5;
+                numPossiblePieces = 6;
                 break;
             case 4:
                 //crabby
@@ -723,7 +759,7 @@ public class Match3Game : MonoBehaviour
                 //jelly
                 break;
             case 6:
-                numPossiblePieces = 6;
+                numPossiblePieces = 7;
                 break;
         }
 
@@ -906,7 +942,7 @@ public class Match3Game : MonoBehaviour
                 //gameBoardArray[hitPieceCoords[0], hitPieceCoords[1]].GetComponent<Match3Piece>().SetLerp(new Vector3(selectedXPosition, selectedYPosition, gameBoardObject.transform.position.z), 0.25f);
                 //gameBoardArray[hitPieceCoords[0], hitPieceCoords[1]] = tempPiece;
 
-                SwapPieces(selectedPiece, hitPieceCoords);
+                StartCoroutine(SwapPieces(selectedPiece, hitPieceCoords));
 
                 selectedPiece = new int[] { -1, -1 };
                 pieceSelector.transform.position = new Vector3(0, 10, 0);
@@ -929,15 +965,15 @@ public class Match3Game : MonoBehaviour
             return;
         }
 
-        SwapPieces(hitPieceCoords, new int[] { hitPieceCoords[0], hitPieceCoords[1] + direction });
+        StartCoroutine(SwapPieces(hitPieceCoords, new int[] { hitPieceCoords[0], hitPieceCoords[1] + direction }));
 
         selectedPiece = new int[] { -1, -1 };
         pieceSelector.transform.position = new Vector3(0, 10, 0);
     }
 
-    void SwapPieces(int[] piece1Coords, int[] piece2Coords)
+    IEnumerator SwapPieces(int[] piece1Coords, int[] piece2Coords)
     {
-        pumpSpeed -= 0.1f;
+        pumpSpeed -= 0.025f;
         if(pumpSpeed < 0)
         {
             pumpSpeed = 0;
@@ -950,7 +986,12 @@ public class Match3Game : MonoBehaviour
 
         if(!piece1Object.GetComponent<Match3Piece>().isSwappable || !piece2Object.GetComponent<Match3Piece>().isSwappable)
         {
-            return;
+            yield break;
+        }
+
+        while(piece1Object.GetComponent<Match3Piece>().isMoving || piece2Object.GetComponent<Match3Piece>().isMoving)
+        {
+            yield return new WaitForSeconds(0.05f);
         }
 
         //store object positions

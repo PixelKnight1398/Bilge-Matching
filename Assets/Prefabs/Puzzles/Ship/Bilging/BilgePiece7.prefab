@@ -11,6 +11,8 @@ GameObject:
   - component: {fileID: 8717195959029131665}
   - component: {fileID: 5716871249572521524}
   - component: {fileID: 7544267514620482302}
+  - component: {fileID: 8229952733940898872}
+  - component: {fileID: -3099829982235928804}
   m_Layer: 0
   m_Name: BilgePiece7
   m_TagString: Untagged
@@ -81,3 +83,38 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &8229952733940898872
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8336834872489718571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: abce99dbdebf1014eaafd19613c38304, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pieceRotationSpeed: {x: 0, y: 0, z: 0}
+  worldPosition: {x: 0, y: 0, z: 0}
+  boardIndices: 0000000000000000
+  pieceType: 
+  isClickable: 1
+  isSwappable: 1
+  isMatched: 0
+  isMoving: 0
+  doesRotate: 1
+  isLogging: 0
+--- !u!65 &-3099829982235928804
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8336834872489718571}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Size: {x: 1.7020226, y: 1.9999998, z: 1.7206593}
+  m_Center: {x: -0.003527999, y: -2.6029852e-16, z: -0.080816895}
