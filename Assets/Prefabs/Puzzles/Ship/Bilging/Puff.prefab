@@ -702,6 +702,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isPuffed: 0
+  isLerping: 0
 --- !u!114 &2955950450968661051
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -717,7 +718,10 @@ MonoBehaviour:
   pieceRotationSpeed: {x: 0, y: 0, z: 0}
   worldPosition: {x: 0, y: 0, z: 0}
   boardIndices: 0000000000000000
+  pieceType: Puff
   isClickable: 1
   isSwappable: 0
+  isMatched: 0
   isMoving: 0
   doesRotate: 0
+  isLogging: 0

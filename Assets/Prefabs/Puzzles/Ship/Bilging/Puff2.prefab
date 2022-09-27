@@ -407,7 +407,7 @@ MonoBehaviour:
   pieceRotationSpeed: {x: 0, y: 0, z: 0}
   worldPosition: {x: 0, y: 0, z: 0}
   boardIndices: 0000000000000000
-  pieceType: 
+  pieceType: Puff
   isClickable: 1
   isSwappable: 0
   isMatched: 0

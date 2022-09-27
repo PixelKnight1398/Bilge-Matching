@@ -13,16 +13,16 @@ public class Match3Game : MonoBehaviour
     [Header("Board Controls")]
     [SerializeField] public int boardWidth = 0; //game width in pieces
     [SerializeField] public int boardHeight = 0; //game height in pieces
-    [SerializeField] float pieceWidth = 0.0f;
-    [SerializeField] float pieceHeight = 0.0f;
-    [SerializeField] float piecePadding = 0.0f;
+    [SerializeField] public float pieceWidth = 0.0f;
+    [SerializeField] public float pieceHeight = 0.0f;
+    [SerializeField] public float piecePadding = 0.0f;
     [SerializeField] float spawnBuffer = 0.0f;
 
     [Space(5)]
     public GameObject[,] gameBoardArray;
     [SerializeField] List<GameObject> boardPieces = new List<GameObject>(); //the possible pieces to be used in the game board
     [SerializeField] List<GameObject> specialBoardPieces = new List<GameObject>(); //puff, jelly, crabby
-    [SerializeField] GameObject gameBoardObject;
+    [SerializeField] public GameObject gameBoardObject;
     [SerializeField] GameObject piecesContainer;
     [SerializeField] GameObject pieceSelector;
     [SerializeField] GameObject popEffectObject;
@@ -122,7 +122,7 @@ public class Match3Game : MonoBehaviour
 
                 gameBoardArray[i, j] = Instantiate(boardPieces[bilgePiece], new Vector3(spawnXPosition, spawnYPosition, gameBoardObject.transform.position.z), Quaternion.identity, piecesContainer.transform);
                 gameBoardArray[i, j].transform.localScale = new Vector3(pieceWidth / 2, pieceHeight / 2, pieceWidth / 2);
-                gameBoardArray[i, j].transform.name = "bilge" + bilgePiece.ToString() + "_" + i.ToString() + "_" + j.ToString();
+                //gameBoardArray[i, j].transform.name = "bilge" + bilgePiece.ToString() + "_" + i.ToString() + "_" + j.ToString();
                 gameBoardArray[i, j].gameObject.GetComponent<Match3Piece>().BoardIndices = new int[] { i, j };
 
                 popEffectArray[i, j] = Instantiate(popEffectObject, new Vector3(newXPosition, newYPosition, gameBoardObject.transform.position.z), Quaternion.identity, particlesContainer.transform);
@@ -132,6 +132,8 @@ public class Match3Game : MonoBehaviour
         //clear matching pieces at beginning
         //fixed update checks for this variable and runs replacement function before board loads
         fixBoard = true;
+
+        currentLevelProgress = 0;
 
         ResetStars();
     }
@@ -182,8 +184,15 @@ public class Match3Game : MonoBehaviour
             case "PLAYING":
                 GetInput();
 
-                AddNewPieces();
+                if (checkingPatterns)
+                {
+                    //check patterns is going to look for patterns
+                    //it's also going to check for crabs
+                    CheckPatterns();
+                }
+
                 CheckEmptyPieces();
+                AddNewPieces();
                 break;
             case "CLEAR":
 
@@ -221,13 +230,6 @@ public class Match3Game : MonoBehaviour
 
                 break;
             case "PLAYING":
-                if (checkingPatterns)
-                {
-                    //check patterns is going to look for patterns
-                    //it's also going to check for crabs
-                    CheckPatterns();
-                }
-
                 if (pumpSpeed > 0)
                 {
                     pumpSpeed -= 0.0001f;
@@ -321,41 +323,47 @@ public class Match3Game : MonoBehaviour
         switch (BoardDirection)
         {
             case newPieceDirection.Up:
-                int i = 0;
                 for (int j = 0; j < boardWidth; j++) {
-                    if (gameBoardArray[i, j] == null)
+                    for (int i = boardHeight - 1; i > -1; i--)
                     {
-                        int bilgePiece = Random.Range(0, numPossiblePieces);
-
-                        float newXPosition = gameBoardObject.transform.position.x + (j * pieceWidth) + (j * piecePadding);
-                        float newYPosition = gameBoardObject.transform.position.y + (i * pieceHeight) + (i * piecePadding);
-
-                        float spawnXPosition = newXPosition - (pieceDirectionModifier[(int)BoardDirection, 1] * (boardWidth * pieceWidth));
-                        float spawnYPosition = gameBoardObject.transform.position.y - (spawnBuffer * pieceDirectionModifier[(int)BoardDirection, 0]) - (pieceDirectionModifier[(int)BoardDirection, 0] * (boardHeight * pieceHeight));
-
-                        GameObject pieceSpawn;
-                        //check special piece
-                        if (Random.Range(0, 100) > (99-(currentLevel/2)) && currentLevel >= 2)
+                        if (gameBoardArray[i, j] == null)
                         {
-                            pieceSpawn = GetSpecialPiece();
-                            pieceSpawn.transform.name = pieceSpawn.transform.name + "_" + i.ToString() + "_" + j.ToString();
-                        }
-                        else
-                        {
-                            pieceSpawn = boardPieces[bilgePiece];
-                            pieceSpawn.transform.name = "bilge" + bilgePiece.ToString() + "_" + i.ToString() + "_" + j.ToString();
-                        }
+                            int bilgePiece = Random.Range(0, numPossiblePieces);
 
-                        gameBoardArray[i, j] = Instantiate(
-                            pieceSpawn,
-                            new Vector3(spawnXPosition, gameBoardObject.transform.position.y - (pieceHeight + piecePadding), 0.0f),
-                            Quaternion.identity,
-                            piecesContainer.transform
-                        );
-                        gameBoardArray[i, j].transform.name = pieceSpawn.transform.name;
-                        gameBoardArray[i, j].transform.localScale = new Vector3(pieceWidth / 2, pieceHeight / 2, pieceWidth / 2);
-                        gameBoardArray[i, j].GetComponent<Match3Piece>().BoardIndices = new int[] { i, j };
-                        gameBoardArray[i, j].GetComponent<Match3Piece>().SetLerp(new Vector3(newXPosition, newYPosition, gameBoardObject.transform.position.z));
+                            float newXPosition = gameBoardObject.transform.position.x + (j * pieceWidth) + (j * piecePadding);
+                            float newYPosition = gameBoardObject.transform.position.y + (i * pieceHeight) + (i * piecePadding);
+
+                            float spawnXPosition = newXPosition - (pieceDirectionModifier[(int)BoardDirection, 1] * (boardWidth * pieceWidth));
+                            //float spawnYPosition = newYPosition - (pieceDirectionModifier[(int)BoardDirection, 0] * spawnBuffer) - (pieceDirectionModifier[(int)BoardDirection, 0] * (boardHeight * pieceHeight));
+                            float spawnYPosition = gameBoardObject.transform.position.y - ((((boardHeight - i) * pieceHeight) + ((boardHeight - i) * piecePadding)) * pieceHeight);
+                            Debug.Log(spawnYPosition);
+
+                            GameObject pieceSpawn;
+                            //check special piece
+                            if (Random.Range(0, 100) > (99 - (currentLevel / 2)) && currentLevel >= 2)
+                            {
+                                pieceSpawn = GetSpecialPiece();
+                                //pieceSpawn.transform.name = pieceSpawn.transform.name + "_" + i.ToString() + "_" + j.ToString();
+                            }
+                            else
+                            {
+                                pieceSpawn = boardPieces[bilgePiece];
+                                //pieceSpawn.transform.name = "bilge" + bilgePiece.ToString() + "_" + i.ToString() + "_" + j.ToString();
+                            }
+
+                            //gameBoardObject.transform.position.y - (pieceHeight + piecePadding)
+
+                            gameBoardArray[i, j] = Instantiate(
+                                pieceSpawn,
+                                new Vector3(spawnXPosition, spawnYPosition, gameBoardObject.transform.position.z),
+                                Quaternion.identity,
+                                piecesContainer.transform
+                            );
+                            //gameBoardArray[i, j].transform.name = pieceSpawn.transform.name;
+                            gameBoardArray[i, j].transform.localScale = new Vector3(pieceWidth / 2, pieceHeight / 2, pieceWidth / 2);
+                            gameBoardArray[i, j].GetComponent<Match3Piece>().BoardIndices = new int[] { i, j };
+                            gameBoardArray[i, j].GetComponent<Match3Piece>().SetLerp(new Vector3(newXPosition, newYPosition, gameBoardObject.transform.position.z));
+                        }
                     }
                 }
                 break;
@@ -372,68 +380,133 @@ public class Match3Game : MonoBehaviour
     }
 
     void CheckEmptyPieces() {
-        for (int i = 0; i < boardHeight; i++)
+        //swap loop increments i <> j
+        //loop from top down
+        //if hits null store indices coords in array and continue down until piece hit
+        //for each piece hit, assign respective null indices coords using incremental index for null indices array
+        //remove piece and store it's coords in the null indices coords array so the remaining pieces can shift up
+
+        List<int[]> nullIndicesStore = new List<int[]>();
+        int storeAccessIndex = 0; //null indices store access index.  Determines which coords need to be assigned still from the store
+
+        for(int j = 0; j < boardWidth; j++)
         {
-            for (int j = 0; j < boardWidth; j++)
+            nullIndicesStore.Clear();
+            for (int i = boardHeight-1; i > -1; i--)
             {
-                int[] checkLocationIndices = new int[] { i + pieceDirectionModifier[(int)BoardDirection, 0], j + pieceDirectionModifier[(int)BoardDirection, 1] };
+                if(gameBoardArray[i, j] == null)
+                {
+                    nullIndicesStore.Add(new int[] { i, j });
+                }
 
-                if (checkLocationIndices[0] < 0 || checkLocationIndices[0] > boardHeight - 1)
-                {
-                    continue;
-                }
-                if (checkLocationIndices[1] < 0 || checkLocationIndices[1] > boardWidth - 1)
-                {
-                    continue;
-                }
-                if (gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]] != null)
+                if(nullIndicesStore.Count == 0)
                 {
                     continue;
                 }
 
-                gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]] = gameBoardArray[i, j];
-                gameBoardArray[i, j] = null;
-                gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]].GetComponent<Match3Piece>().BoardIndices = new int[] { checkLocationIndices[0], checkLocationIndices[1] };
-                gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]].transform.name = gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]].transform.name.Substring(0, 6) + "_" + checkLocationIndices[0].ToString() + "_" + checkLocationIndices[1].ToString();
-                float newXPosition = gameBoardObject.transform.position.x + (checkLocationIndices[1] * pieceWidth) + (checkLocationIndices[1] * piecePadding);
-                float newYPosition = gameBoardObject.transform.position.y + (checkLocationIndices[0] * pieceHeight) + (checkLocationIndices[0] * piecePadding);
-                gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]].GetComponent<Match3Piece>().SetLerp(new Vector3(newXPosition, newYPosition, gameBoardObject.transform.position.z));
+                if(i == 0)
+                {
+                    Debug.Log("Piece resetting");
+                }
+
+                if(gameBoardArray[i, j] != null)
+                {
+                    int[] newCoords = nullIndicesStore[storeAccessIndex];
+                    storeAccessIndex++;
+
+                    gameBoardArray[i, j].GetComponent<Match3Piece>().BoardIndices = new int[] { newCoords[0], newCoords[1] };
+                    //gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]].transform.name = gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]].transform.name.Substring(0, 6) + "_" + checkLocationIndices[0].ToString() + "_" + checkLocationIndices[1].ToString();
+                    float newXPosition = gameBoardObject.transform.position.x + (newCoords[1] * pieceWidth) + (newCoords[1] * piecePadding);
+                    float newYPosition = gameBoardObject.transform.position.y + (newCoords[0] * pieceHeight) + (newCoords[0] * piecePadding);
+                    gameBoardArray[i, j].GetComponent<Match3Piece>().SetLerp(new Vector3(newXPosition, newYPosition, gameBoardObject.transform.position.z));
+
+                    gameBoardArray[newCoords[0], newCoords[1]] = gameBoardArray[i, j];
+                    gameBoardArray[i, j] = null;
+                    nullIndicesStore.Add(new int[] { i, j });
+                }
             }
         }
+
+        nullIndicesStore.Clear();
+        
+        //for (int i = 0; i < boardHeight; i++)
+        //{
+        //    for (int j = 0; j < boardWidth; j++)
+        //    {
+        //        int[] checkLocationIndices = new int[] { i + pieceDirectionModifier[(int)BoardDirection, 0], j + pieceDirectionModifier[(int)BoardDirection, 1] };
+
+        //        if (checkLocationIndices[0] < 0 || checkLocationIndices[0] > boardHeight - 1)
+        //        {
+        //            continue;
+        //        }
+        //        if (checkLocationIndices[1] < 0 || checkLocationIndices[1] > boardWidth - 1)
+        //        {
+        //            continue;
+        //        }
+        //        if (gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]] != null)
+        //        {
+        //            continue;
+        //        }
+
+        //        gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]] = gameBoardArray[i, j];
+        //        gameBoardArray[i, j] = null;
+        //        gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]].GetComponent<Match3Piece>().BoardIndices = new int[] { checkLocationIndices[0], checkLocationIndices[1] };
+        //        //gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]].transform.name = gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]].transform.name.Substring(0, 6) + "_" + checkLocationIndices[0].ToString() + "_" + checkLocationIndices[1].ToString();
+        //        float newXPosition = gameBoardObject.transform.position.x + (checkLocationIndices[1] * pieceWidth) + (checkLocationIndices[1] * piecePadding);
+        //        float newYPosition = gameBoardObject.transform.position.y + (checkLocationIndices[0] * pieceHeight) + (checkLocationIndices[0] * piecePadding);
+        //        gameBoardArray[checkLocationIndices[0], checkLocationIndices[1]].GetComponent<Match3Piece>().SetLerp(new Vector3(newXPosition, newYPosition, gameBoardObject.transform.position.z));
+        //    }
+        //}
     }
 
     void ReplacePieces()
     {
-        Debug.Log("Replacing");
-        List<int[]> piecesToReplace = FindMatchingPieces();
+        List<List<int[]>> piecesToReplaceGroups = FindMatchingPieces();
+        List<int[]> piecesToReplace;
 
-        for (int i = 0; i < piecesToReplace.Count; i++)
+        for (int j = 0; j < piecesToReplaceGroups.Count; j++)
         {
-            int replacementPiece = Random.Range(0, numPossiblePieces);
+            piecesToReplace = piecesToReplaceGroups[j];
+            for (int i = 0; i < piecesToReplace.Count; i++)
+            {
+                int replacementPiece = Random.Range(0, numPossiblePieces);
 
-            float newXPosition = gameBoardObject.transform.position.x + (piecesToReplace[i][1] * pieceWidth) + (piecesToReplace[i][1] * piecePadding);
-            float newYPosition = gameBoardObject.transform.position.y + (piecesToReplace[i][0] * pieceHeight) + (piecesToReplace[i][0] * piecePadding);
+                float newXPosition = gameBoardObject.transform.position.x + (piecesToReplace[i][1] * pieceWidth) + (piecesToReplace[i][1] * piecePadding);
+                float newYPosition = gameBoardObject.transform.position.y + (piecesToReplace[i][0] * pieceHeight) + (piecesToReplace[i][0] * piecePadding);
 
-            Destroy(gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]]);
+                Destroy(gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]]);
 
-            gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]] = Instantiate(
-                boardPieces[replacementPiece],
-                new Vector3(
-                    gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]].transform.position.x,
-                    gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]].transform.position.y,
-                    gameBoardObject.transform.position.z
-                ),
-                Quaternion.identity,
-                piecesContainer.transform
-            );
-            gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]].transform.name = "bilge" + replacementPiece.ToString() + "_" + piecesToReplace[i][0].ToString() + "_" + piecesToReplace[i][1].ToString();
-            gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]].transform.localScale = new Vector3(pieceWidth / 2, pieceHeight / 2, pieceWidth / 2);
-            gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]].GetComponent<Match3Piece>().BoardIndices = new int[] { piecesToReplace[i][0], piecesToReplace[i][1] };
+                gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]] = Instantiate(
+                    boardPieces[replacementPiece],
+                    new Vector3(
+                        gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]].transform.position.x,
+                        gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]].transform.position.y,
+                        gameBoardObject.transform.position.z
+                    ),
+                    Quaternion.identity,
+                    piecesContainer.transform
+                );
+                //gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]].transform.name = "bilge" + replacementPiece.ToString() + "_" + piecesToReplace[i][0].ToString() + "_" + piecesToReplace[i][1].ToString();
+                gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]].transform.localScale = new Vector3(pieceWidth / 2, pieceHeight / 2, pieceWidth / 2);
+                gameBoardArray[piecesToReplace[i][0], piecesToReplace[i][1]].GetComponent<Match3Piece>().BoardIndices = new int[] { piecesToReplace[i][0], piecesToReplace[i][1] };
+            }
         }
     }
 
-    List<int[]> FindMatchingPieces()
+    List<List<int[]>> FindMatchingPieces()
     {
+        List<List<int[]>> matchPieceGroups = new List<List<int[]>>();
+        for(var m = 0; m < boardPieces.Count; m++)
+        {
+            matchPieceGroups.Add(new List<int[]>());
+        }
+        //matchpieces groups should look like:
+        //[ <- this is the group container
+        //    [ <- this array level is a type
+        //        [0,1], [0,2], [0,3] <- this is all the matching pieces of a type
+        //    ],
+        //]
+
         List<int[]> matchPieces = new List<int[]>();
 
         holdsCombo = false;
@@ -447,12 +520,15 @@ public class Match3Game : MonoBehaviour
                     holdsCombo = true;
                     continue;
                 }
-                if (gameBoardArray[i, j].GetComponent<Match3Piece>().isMatched)
-                {
-                    matchPieces.Add(new int[] { i, j });
-                }
 
                 string currentPieceName = gameBoardArray[i, j].transform.name.Substring(0, 6);
+                int matchPieceGroupIndex = int.Parse(currentPieceName.Substring(currentPieceName.Length - 1)) - 1;
+
+                if (gameBoardArray[i, j].GetComponent<Match3Piece>().isMatched)
+                {
+                    matchPieceGroups[matchPieceGroupIndex].Add(new int[] { i, j });
+                    //matchPieces.Add(new int[] { i, j });
+                }
 
                 //FIND CRABS
                 if (currentPieceName == "Crabby")
@@ -663,62 +739,71 @@ public class Match3Game : MonoBehaviour
             comboState = 0;
         }
 
-        return matchPieces;
+        return matchPieceGroups;
     }
 
     void CheckPatterns()
     {
-        List<int[]> matchPieces = FindMatchingPieces();
+        List<List<int[]>> matchPieceGroups = FindMatchingPieces();
 
         //Debug.Log("Match Pieces Count: " + matchPieces.Count);
-
-        for (int r = 0; r < matchPieces.Count; r++)
+        for (int q = 0; q < matchPieceGroups.Count; q++)
         {
-            //Debug.Log("I: " + matchPieces[r][0] + "; J: " + matchPieces[r][1] + ";");
-            int[] deleteIndices = matchPieces[r];
-            if (gameBoardArray[deleteIndices[0], deleteIndices[1]] == null)
+            List<int[]> matchPieces = matchPieceGroups[q];
+            if (matchPieces.Count > 2)
             {
-                continue;
+                for (int r = 0; r < matchPieces.Count; r++)
+                {
+                    //Debug.Log("I: " + matchPieces[r][0] + "; J: " + matchPieces[r][1] + ";");
+                    GameObject tempMatchPiece = gameBoardArray[matchPieces[r][0], matchPieces[r][1]].gameObject;
+                    //Debug.Log(tempMatchPiece.transform.name);
+                    Match3Piece tempMatchPieceScript = tempMatchPiece.GetComponent<Match3Piece>();
+                    //Debug.Log("Vertical Matches: " + (tempMatchPieceScript.matchCounts[0] + tempMatchPieceScript.matchCounts[2]));
+                    //Debug.Log("Horizontal Matches: " + (tempMatchPieceScript.matchCounts[1] + tempMatchPieceScript.matchCounts[3]));
+
+                    int[] deleteIndices = matchPieces[r];
+                    if (gameBoardArray[deleteIndices[0], deleteIndices[1]] == null)
+                    {
+                        continue;
+                    }
+                    Destroy(gameBoardArray[deleteIndices[0], deleteIndices[1]].transform.gameObject);
+                    gameBoardArray[deleteIndices[0], deleteIndices[1]] = null;
+
+                    popEffectArray[deleteIndices[0], deleteIndices[1]].GetComponent<ParticleSystem>().Play();
+
+                }
+
+                switch (comboState)
+                {
+                    case 0:
+                        if (matchPieces.Count == 3)
+                        {
+                            Match3Sound.Play();
+                        }
+                        else if (matchPieces.Count == 4)
+                        {
+                            Match4Sound.Play();
+                        }
+                        else if (matchPieces.Count == 5)
+                        {
+                            Match5Sound.Play();
+                        }
+                        else if (matchPieces.Count >= 6)
+                        {
+                            Match6Sound.Play();
+                        }
+                        comboState = 1;
+                        break;
+                    case 1:
+                        MatchCombo1Sound.Play();
+                        comboState = 2;
+                        break;
+                    case 2:
+                        MatchCombo1Sound.Play();
+                        break;
+                }
+                Combo(Mathf.RoundToInt(matchPieces.Count / 2));
             }
-            Destroy(gameBoardArray[deleteIndices[0], deleteIndices[1]].transform.gameObject);
-            gameBoardArray[deleteIndices[0], deleteIndices[1]] = null;
-
-            popEffectArray[deleteIndices[0], deleteIndices[1]].GetComponent<ParticleSystem>().Play();
-
-        }
-
-        if (matchPieces.Count > 0)
-        {
-            switch (comboState)
-            {
-                case 0:
-                    if (matchPieces.Count == 3)
-                    {
-                        Match3Sound.Play();
-                    }
-                    else if (matchPieces.Count == 4)
-                    {
-                        Match4Sound.Play();
-                    }
-                    else if (matchPieces.Count == 5)
-                    {
-                        Match5Sound.Play();
-                    }
-                    else if (matchPieces.Count >= 6)
-                    {
-                        Match6Sound.Play();
-                    }
-                    comboState = 1;
-                    break;
-                case 1:
-                    MatchCombo1Sound.Play();
-                    comboState = 2;
-                    break;
-                case 2:
-                    MatchCombo1Sound.Play();
-                    break;
-            }
-            Combo(Mathf.RoundToInt(matchPieces.Count / 2));
         }
     }
 
@@ -1028,8 +1113,8 @@ public class Match3Game : MonoBehaviour
         );
 
         //change object names
-        piece1Object.transform.name = piece1Object.transform.name + "_" + piece2Coords[0].ToString() + "_" + piece2Coords[1].ToString();
-        piece2Object.transform.name = piece2Object.transform.name + "_" + piece1Coords[0].ToString() + "_" + piece1Coords[1].ToString();
+        //piece1Object.transform.name = piece1Object.transform.name + "_" + piece2Coords[0].ToString() + "_" + piece2Coords[1].ToString();
+        //piece2Object.transform.name = piece2Object.transform.name + "_" + piece1Coords[0].ToString() + "_" + piece1Coords[1].ToString();
 
         //update gameBoardArray to swap objects
         gameBoardArray[piece1Coords[0], piece1Coords[1]] = piece2Object;

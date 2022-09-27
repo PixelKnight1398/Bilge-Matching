@@ -103,7 +103,7 @@ MonoBehaviour:
   pieceRotationSpeed: {x: 0, y: 0, z: 0}
   worldPosition: {x: 0, y: 0, z: 0}
   boardIndices: 0000000000000000
-  pieceType: 
+  pieceType: bilge1
   isClickable: 1
   isSwappable: 1
   isMatched: 0

@@ -10,6 +10,7 @@ public class Match3Piece : MonoBehaviour
     [SerializeField] Vector3 worldPosition = new Vector3(0.0f, 0.0f, 0.0f);
 
     [SerializeField] int[] boardIndices = new int[] { 0, 0 }; //y, x; row, col;
+    [SerializeField] public int[] matchCounts;
     [SerializeField] string pieceType;
     [SerializeField] public bool isClickable = true;
     [SerializeField] public bool isSwappable = true;
@@ -17,11 +18,11 @@ public class Match3Piece : MonoBehaviour
     public bool isMatched = false;
     public bool isMoving = false;
     [SerializeField] bool doesRotate = true;
-    float timeElapsed = 0;
-    float lerpDuration = 0.5f;
-    Vector3 startPosition = new Vector3(0f, 0f, 0f);
-    Vector3 middlePosition = new Vector3(0f, 0f, 0f);
-    Vector3 endPosition = new Vector3(0f, 0f, 0f);
+    [SerializeField] float timeElapsed = 0;
+    [SerializeField] float lerpDuration = 0.5f;
+    [SerializeField] Vector3 startPosition = new Vector3(0f, 0f, 0f);
+    [SerializeField] Vector3 middlePosition = new Vector3(0f, 0f, 0f);
+    [SerializeField] Vector3 endPosition = new Vector3(0f, 0f, 0f);
 
     bool isSelfDestruct = false;
 
@@ -32,13 +33,14 @@ public class Match3Piece : MonoBehaviour
         get { return boardIndices; }
         set {
             boardIndices = value;
+
+            SetName();
         }
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        pieceType = gameObject.transform.name.Substring(0, 6);
         GameController = GameObject.Find("Match3Manager").GetComponent<Match3Game>();
 
         pieceRotationSpeed = new Vector3(Random.Range(0.0f, 1f), Random.Range(0.0f, 1f), Random.Range(0.0f, 1f));
@@ -62,17 +64,36 @@ public class Match3Piece : MonoBehaviour
         {
             lerpToPosition();
         }
-        else
-        {
-            SetPieceMatchStatus();
-        }
 
+        if(GameController.currentGameState == "CLEAR" && !isMoving)
+        {
+            float lerpSpeed = Random.Range(1.75f, 2.25f);
+
+            float newXPosition = GameController.gameBoardObject.transform.position.x + (BoardIndices[1] * GameController.pieceWidth) + (BoardIndices[1] * GameController.piecePadding);
+            //float newYPosition = gameCamera.ScreenToWorldPoint(new Vector3(0.0f, gameCamera.pixelHeight, gameBoardObject.transform.position.z)).y;
+            float newYPosition = 10.0f;
+
+            SetLerp(
+                new Vector3(newXPosition, newYPosition, GameController.gameBoardObject.transform.position.z),
+                lerpSpeed - (BoardIndices[0] * 0.1f)
+            );
+        }
+    }
+
+    private void LateUpdate()
+    {
+        SetPieceMatchStatus();
+    }
+
+    void SetName()
+    {
+        gameObject.transform.name = pieceType + " (" + BoardIndices[0] + "," + BoardIndices[1] + ")";
     }
 
     public void SetPieceMatchStatus()
     {
         //vertical and horizontal match counts
-        int[] matchCounts = new int[4]; //up, right, down, left (clockwise)
+        matchCounts = new int[4]; //up, right, down, left (clockwise)
 
         //check in each direction 2 spots for pieces
 
@@ -160,6 +181,7 @@ public class Match3Piece : MonoBehaviour
         timeElapsed = 0;
         lerpDuration = zLerpDuration;
         startPosition = gameObject.transform.position;
+        middlePosition = new Vector3(0.0f, 0.0f, 0.0f);
         endPosition = newPosition;
 
         pieceRotationSpeed = new Vector3(Random.Range(0.0f, 1f), Random.Range(0.0f, 1f), Random.Range(0.0f, 1f));
