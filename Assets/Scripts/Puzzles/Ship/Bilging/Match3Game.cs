@@ -118,7 +118,7 @@ public class Match3Game : MonoBehaviour
                 float spawnXPosition = newXPosition - (pieceDirectionModifier[(int)BoardDirection, 1] * spawnBuffer) - (pieceDirectionModifier[(int)BoardDirection, 1] * (boardWidth * pieceWidth));
                 float spawnYPosition = newYPosition - (pieceDirectionModifier[(int)BoardDirection, 0] * spawnBuffer) - (pieceDirectionModifier[(int)BoardDirection, 0] * (boardHeight * pieceHeight));
 
-                int bilgePiece = Random.Range(0, numPossiblePieces);
+                int bilgePiece = UnityEngine.Random.Range(0, numPossiblePieces);
 
                 gameBoardArray[i, j] = Instantiate(boardPieces[bilgePiece], new Vector3(spawnXPosition, spawnYPosition, gameBoardObject.transform.position.z), Quaternion.identity, piecesContainer.transform);
                 gameBoardArray[i, j].transform.localScale = new Vector3(pieceWidth / 2, pieceHeight / 2, pieceWidth / 2);
@@ -152,7 +152,7 @@ public class Match3Game : MonoBehaviour
         //send up pieces
         for (int j = 0; j < boardWidth; j++)
         {
-            float lerpSpeed = Random.Range(1.75f, 2.25f);
+            float lerpSpeed = UnityEngine.Random.Range(1.75f, 2.25f);
             for (int i = 0; i < boardHeight; i++)
             {
                 float newXPosition = gameBoardObject.transform.position.x + (j * pieceWidth) + (j * piecePadding);
@@ -184,13 +184,6 @@ public class Match3Game : MonoBehaviour
             case "PLAYING":
                 GetInput();
 
-                if (checkingPatterns)
-                {
-                    //check patterns is going to look for patterns
-                    //it's also going to check for crabs
-                    CheckPatterns();
-                }
-
                 CheckEmptyPieces();
                 AddNewPieces();
                 break;
@@ -201,8 +194,6 @@ public class Match3Game : MonoBehaviour
 
                 break;
         }
-
-
     }
 
     private void FixedUpdate()
@@ -293,20 +284,47 @@ public class Match3Game : MonoBehaviour
         }
     }
 
+    void LateUpdate()
+    {
+        switch (currentGameState)
+        {
+            case "INIT":
+
+                break;
+            case "LOADING":
+
+                break;
+            case "PLAYING":
+                if (checkingPatterns)
+                {
+                    //check patterns is going to look for patterns
+                    //it's also going to check for crabs
+                    CheckPatterns();
+                }
+                break;
+            case "CLEAR":
+
+                break;
+            default:
+
+                break;
+        }
+    }
+
     GameObject GetSpecialPiece()
     {
         int specialPieceIndex = -1;
         if (currentLevel >= 2 && currentLevel < 4)
         {
-            specialPieceIndex = Random.Range(0, 1);
+            specialPieceIndex = UnityEngine.Random.Range(0, 1);
         }
         else if (currentLevel >= 4 && currentLevel < 6)
         {
-            specialPieceIndex = Random.Range(0, 2);
+            specialPieceIndex = UnityEngine.Random.Range(0, 2);
         }
         else if (currentLevel >= 6)
         {
-            specialPieceIndex = Random.Range(0, 3);
+            specialPieceIndex = UnityEngine.Random.Range(0, 3);
         }
         if (specialPieceIndex != -1)
         {
@@ -328,7 +346,7 @@ public class Match3Game : MonoBehaviour
                     {
                         if (gameBoardArray[i, j] == null)
                         {
-                            int bilgePiece = Random.Range(0, numPossiblePieces);
+                            int bilgePiece = UnityEngine.Random.Range(0, numPossiblePieces);
 
                             float newXPosition = gameBoardObject.transform.position.x + (j * pieceWidth) + (j * piecePadding);
                             float newYPosition = gameBoardObject.transform.position.y + (i * pieceHeight) + (i * piecePadding);
@@ -336,11 +354,10 @@ public class Match3Game : MonoBehaviour
                             float spawnXPosition = newXPosition - (pieceDirectionModifier[(int)BoardDirection, 1] * (boardWidth * pieceWidth));
                             //float spawnYPosition = newYPosition - (pieceDirectionModifier[(int)BoardDirection, 0] * spawnBuffer) - (pieceDirectionModifier[(int)BoardDirection, 0] * (boardHeight * pieceHeight));
                             float spawnYPosition = gameBoardObject.transform.position.y - ((((boardHeight - i) * pieceHeight) + ((boardHeight - i) * piecePadding)) * pieceHeight);
-                            Debug.Log(spawnYPosition);
 
                             GameObject pieceSpawn;
                             //check special piece
-                            if (Random.Range(0, 100) > (99 - (currentLevel / 2)) && currentLevel >= 2)
+                            if (UnityEngine.Random.Range(0, 100) > (99 - (currentLevel / 2)) && currentLevel >= 2)
                             {
                                 pieceSpawn = GetSpecialPiece();
                                 //pieceSpawn.transform.name = pieceSpawn.transform.name + "_" + i.ToString() + "_" + j.ToString();
@@ -391,6 +408,7 @@ public class Match3Game : MonoBehaviour
 
         for(int j = 0; j < boardWidth; j++)
         {
+            storeAccessIndex = 0;
             nullIndicesStore.Clear();
             for (int i = boardHeight-1; i > -1; i--)
             {
@@ -406,7 +424,7 @@ public class Match3Game : MonoBehaviour
 
                 if(i == 0)
                 {
-                    Debug.Log("Piece resetting");
+                    //Debug.Log("Piece resetting");
                 }
 
                 if(gameBoardArray[i, j] != null)
@@ -469,7 +487,7 @@ public class Match3Game : MonoBehaviour
             piecesToReplace = piecesToReplaceGroups[j];
             for (int i = 0; i < piecesToReplace.Count; i++)
             {
-                int replacementPiece = Random.Range(0, numPossiblePieces);
+                int replacementPiece = UnityEngine.Random.Range(0, numPossiblePieces);
 
                 float newXPosition = gameBoardObject.transform.position.x + (piecesToReplace[i][1] * pieceWidth) + (piecesToReplace[i][1] * piecePadding);
                 float newYPosition = gameBoardObject.transform.position.y + (piecesToReplace[i][0] * pieceHeight) + (piecesToReplace[i][0] * piecePadding);
@@ -515,14 +533,22 @@ public class Match3Game : MonoBehaviour
         {
             for (int j = 0; j < boardWidth; j++)
             {
-                if (gameBoardArray[i, j] == null || gameBoardArray[i, j].gameObject.GetComponent<Match3Piece>().isMoving)
-                {
-                    holdsCombo = true;
-                    continue;
-                }
+                //if (gameBoardArray[i, j] == null || gameBoardArray[i, j].gameObject.GetComponent<Match3Piece>().isMoving)
+                //{
+                //    holdsCombo = true;
+                //    continue;
+                //}
 
                 string currentPieceName = gameBoardArray[i, j].transform.name.Substring(0, 6);
-                int matchPieceGroupIndex = int.Parse(currentPieceName.Substring(currentPieceName.Length - 1)) - 1;
+
+                int matchPieceGroupIndex = 0;
+                try
+                {
+                    matchPieceGroupIndex = int.Parse(currentPieceName.Substring(currentPieceName.Length - 1)) - 1;
+                } catch(System.FormatException er1)
+                {
+                    Debug.LogError("No piece number");
+                }
 
                 if (gameBoardArray[i, j].GetComponent<Match3Piece>().isMatched)
                 {
@@ -752,6 +778,16 @@ public class Match3Game : MonoBehaviour
             List<int[]> matchPieces = matchPieceGroups[q];
             if (matchPieces.Count > 2)
             {
+                bool skipGroupMoving = false;
+                for(int y = 0; y < matchPieces.Count; y++)
+                {
+                    if(gameBoardArray[matchPieces[y][0], matchPieces[y][1]].GetComponent<Match3Piece>().isMoving)
+                    {
+                        skipGroupMoving = true;
+                    }
+                }
+                if (skipGroupMoving)
+                    continue;
                 for (int r = 0; r < matchPieces.Count; r++)
                 {
                     //Debug.Log("I: " + matchPieces[r][0] + "; J: " + matchPieces[r][1] + ";");
@@ -881,7 +917,7 @@ public class Match3Game : MonoBehaviour
 
         for (int j = 0; j < boardWidth; j++)
         {
-            float lerpSpeed = Random.Range(1.75f, 2.25f);
+            float lerpSpeed = UnityEngine.Random.Range(1.75f, 2.25f);
             for (int i = 0; i < boardHeight; i++)
             {
                 float newXPosition = gameBoardObject.transform.position.x + (j * pieceWidth) + (j * piecePadding);

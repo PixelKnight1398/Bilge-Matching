@@ -41,6 +41,9 @@ public class Match3Piece : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+
+        isMatched = false;
+
         GameController = GameObject.Find("Match3Manager").GetComponent<Match3Game>();
 
         pieceRotationSpeed = new Vector3(Random.Range(0.0f, 1f), Random.Range(0.0f, 1f), Random.Range(0.0f, 1f));
@@ -65,7 +68,9 @@ public class Match3Piece : MonoBehaviour
             lerpToPosition();
         }
 
-        if(GameController.currentGameState == "CLEAR" && !isMoving)
+        SetPieceMatchStatus();
+
+        if (GameController.currentGameState == "CLEAR" && !isMoving)
         {
             float lerpSpeed = Random.Range(1.75f, 2.25f);
 
@@ -80,11 +85,6 @@ public class Match3Piece : MonoBehaviour
         }
     }
 
-    private void LateUpdate()
-    {
-        SetPieceMatchStatus();
-    }
-
     void SetName()
     {
         gameObject.transform.name = pieceType + " (" + BoardIndices[0] + "," + BoardIndices[1] + ")";
@@ -92,6 +92,14 @@ public class Match3Piece : MonoBehaviour
 
     public void SetPieceMatchStatus()
     {
+        isMatched = false;
+
+        //if (isMoving)
+        //    return;
+
+        if(isLogging)
+            Debug.Log("<color=yellow>Checking ------- </color>" + BoardIndices[0] + ", " + BoardIndices[1]);
+
         //vertical and horizontal match counts
         matchCounts = new int[4]; //up, right, down, left (clockwise)
 
@@ -104,10 +112,13 @@ public class Match3Piece : MonoBehaviour
         matchCounts[2] += CheckCoordsMatch(0, (checkIncrement * -1)) ? 1 : 0;
         matchCounts[3] += CheckCoordsMatch(1, (checkIncrement * -1)) ? 1 : 0;
 
-        //Debug.Log("Up 1: " + matchCounts[0]);
-        //Debug.Log("Right 1: " + matchCounts[1]);
-        //Debug.Log("Down 1: " + matchCounts[2]);
-        //Debug.Log("Left 1: " + matchCounts[3]);
+        if (isLogging)
+        {
+            Debug.Log("Up 1: " + matchCounts[0]);
+            Debug.Log("Right 1: " + matchCounts[1]);
+            Debug.Log("Down 1: " + matchCounts[2]);
+            Debug.Log("Left 1: " + matchCounts[3]);
+        }
 
         checkIncrement = 2;
 
@@ -116,15 +127,20 @@ public class Match3Piece : MonoBehaviour
         matchCounts[2] += (CheckCoordsMatch(0, (checkIncrement * -1)) && matchCounts[2] > 0) ? 1 : 0;
         matchCounts[3] += (CheckCoordsMatch(1, (checkIncrement * -1)) && matchCounts[3] > 0) ? 1 : 0;
 
-        //Debug.Log("Up 2: " + matchCounts[0]);
-        //Debug.Log("Right 2: " + matchCounts[1]);
-        //Debug.Log("Down 2: " + matchCounts[2]);
-        //Debug.Log("Left 2: " + matchCounts[3]);
+        if (isLogging)
+        {
+            Debug.Log("Up 2: " + matchCounts[0]);
+            Debug.Log("Right 2: " + matchCounts[1]);
+            Debug.Log("Down 2: " + matchCounts[2]);
+            Debug.Log("Left 2: " + matchCounts[3]);
+        }
 
         //if up + down or left + right are either greater than 2 pieces then this piece is a matching piece
         if ((matchCounts[0] + matchCounts[2]) >= 2 || (matchCounts[1] + matchCounts[3]) >= 2)
         {
             isMatched = true;
+            if(isLogging)
+                Debug.Log("<color=green>MATCHED ------- </color>" + BoardIndices[0] + ", " + BoardIndices[1]);
         }
     }
 
@@ -132,14 +148,14 @@ public class Match3Piece : MonoBehaviour
     {
         int boardAxisLimit = (affectedIndex == 0) ? GameController.boardHeight : GameController.boardWidth;
 
-        if (isLogging)
-        {
-            Debug.Log("BoardIndex: " + affectedIndex);
-            Debug.Log("BoardIndexValue: " + BoardIndices[affectedIndex]);
-            Debug.Log("Increment: " + affectIncrement);
-            Debug.Log("BoardIndex + affectIncrement: " + (BoardIndices[affectedIndex] + affectIncrement));
-            Debug.Log("BoardAxisLimit: " + boardAxisLimit);
-        }
+        //if (isLogging)
+        //{
+        //    Debug.Log("BoardIndex: " + affectedIndex);
+        //    Debug.Log("BoardIndexValue: " + BoardIndices[affectedIndex]);
+        //    Debug.Log("Increment: " + affectIncrement);
+        //    Debug.Log("BoardIndex + affectIncrement: " + (BoardIndices[affectedIndex] + affectIncrement));
+        //    Debug.Log("BoardAxisLimit: " + boardAxisLimit);
+        //}
 
         if(InBounds(BoardIndices[affectedIndex]+affectIncrement, boardAxisLimit))
         {
@@ -152,7 +168,9 @@ public class Match3Piece : MonoBehaviour
                 checkPieceController = GameController.gameBoardArray[nextIndices[0], nextIndices[1]].GetComponent<Match3Piece>();
                 checkPieceType = checkPieceController.pieceType;
 
-                if (checkPieceType == pieceType && !checkPieceController.isMoving)
+                //maybe remove any instances of stopping matching due to not moving and stop it when deleting the pieces in game manager
+                // && !checkPieceController.isMoving
+                if (checkPieceType == pieceType)
                 {
                     return true;
                 }
@@ -221,7 +239,7 @@ public class Match3Piece : MonoBehaviour
 
     void lerpToPosition()
     {
-        if(timeElapsed > lerpDuration)
+        if(timeElapsed >=  lerpDuration)
         {
             gameObject.transform.position = endPosition;
             isMoving = false;
