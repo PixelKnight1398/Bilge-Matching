@@ -47,6 +47,7 @@ public class Match3Game : MonoBehaviour
     [SerializeField] AudioSource MatchCombo2Sound = new AudioSource();
     [SerializeField] AudioSource SwapPieceSound = new AudioSource();
     [SerializeField] AudioSource CrabbySound = new AudioSource();
+    [SerializeField] AudioSource PuffSound = new AudioSource();
 
     [Space(10)]
     [Header("Game Stats")]
@@ -184,7 +185,15 @@ public class Match3Game : MonoBehaviour
             case "PLAYING":
                 GetInput();
 
+                if (checkingPatterns)
+                {
+                    //check patterns is going to look for patterns
+                    //it's also going to check for crabs
+                    CheckPatterns();
+                }
+
                 CheckEmptyPieces();
+                AddNewPieces();
                 break;
             case "CLEAR":
 
@@ -294,13 +303,7 @@ public class Match3Game : MonoBehaviour
 
                 break;
             case "PLAYING":
-                if (checkingPatterns)
-                {
-                    //check patterns is going to look for patterns
-                    //it's also going to check for crabs
-                    CheckPatterns();
-                }
-                AddNewPieces();
+                
                 break;
             case "CLEAR":
 
@@ -982,6 +985,7 @@ public class Match3Game : MonoBehaviour
                 Destroy(gameBoardArray[popCoords[0] + yIncrement, popCoords[1] + xIncrement].transform.gameObject);
                 gameBoardArray[popCoords[0] + yIncrement, popCoords[1] + xIncrement] = null;
                 popEffectArray[popCoords[0] + yIncrement, popCoords[1] + xIncrement].GetComponent<ParticleSystem>().Play();
+                Match4Sound.Play();
             }
         }
         Combo(3);
@@ -1027,6 +1031,7 @@ public class Match3Game : MonoBehaviour
             //create coroutine or function for deleting surrounding pieces on time with animation
             hitPiece.transform.gameObject.GetComponent<PuffController>().isPuffed = true;
             hitPiece.transform.gameObject.GetComponent<PuffController>().TransformLerp(new Vector3(0.45f, 0.9f, 0.45f), 0.6f);
+            PuffSound.Play();
             StartCoroutine(PuffPop(hitPieceCoords, 0.6f));
         }
 
