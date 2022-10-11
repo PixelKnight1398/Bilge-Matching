@@ -185,7 +185,6 @@ public class Match3Game : MonoBehaviour
                 GetInput();
 
                 CheckEmptyPieces();
-                AddNewPieces();
                 break;
             case "CLEAR":
 
@@ -301,6 +300,7 @@ public class Match3Game : MonoBehaviour
                     //it's also going to check for crabs
                     CheckPatterns();
                 }
+                AddNewPieces();
                 break;
             case "CLEAR":
 
@@ -533,11 +533,13 @@ public class Match3Game : MonoBehaviour
         {
             for (int j = 0; j < boardWidth; j++)
             {
-                //if (gameBoardArray[i, j] == null || gameBoardArray[i, j].gameObject.GetComponent<Match3Piece>().isMoving)
-                //{
-                //    holdsCombo = true;
-                //    continue;
-                //}
+                if (gameBoardArray[i, j] == null)
+                {
+                    holdsCombo = true;
+                    continue;
+                }
+                if (gameBoardArray[i, j].gameObject.GetComponent<Match3Piece>().isMoving)
+                    holdsCombo = true;
 
                 string currentPieceName = gameBoardArray[i, j].transform.name.Substring(0, 6);
 
@@ -547,7 +549,8 @@ public class Match3Game : MonoBehaviour
                     matchPieceGroupIndex = int.Parse(currentPieceName.Substring(currentPieceName.Length - 1)) - 1;
                 } catch(System.FormatException er1)
                 {
-                    Debug.LogError("No piece number");
+                    //no piece number exists, don't worry about it
+                    //Debug.LogError("No piece number");
                 }
 
                 if (gameBoardArray[i, j].GetComponent<Match3Piece>().isMatched)
